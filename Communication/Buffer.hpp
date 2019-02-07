@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Error.hpp"
+#include "Traits.hpp"
 
 namespace Communication
 {
@@ -32,6 +33,19 @@ namespace Communication
 		static constexpr size_t headerSize = sizeof(BufferType) + sizeof(dataSize);
 
 	public:
+		Buffer()
+			: dataSize(0)
+			, size(0)
+			, type(BufferType::Custom)
+			, buf(nullptr, nullptr) {}
+
+		/** Buffer constructed from byte array (deserialization), takes ownership. */
+		Buffer(void*&& bytes)
+			: dataSize(*reinterpret_cast<decltype(dataSize) *>((static_cast<char *>(bytes) + sizeof(BufferType))))
+			, size(headerSize + dataSize)
+			, type(*static_cast<BufferType *>(bytes))
+			, buf(bytes, [](void *buf) { std::free(buf); }) {}
+
 		/** Constructs a buffer directly from a fundamental type value. */
 		template<typename T> Buffer(T value)
 			: dataSize(sizeof(T))
@@ -77,13 +91,6 @@ namespace Communication
 		{
 			std::memcpy(buf.get(), bytes, size);
 		}
-
-		/** Buffer constructed from byte array (deserialization), takes ownership. */
-		Buffer(void*&& bytes)
-			: dataSize(*reinterpret_cast<decltype(dataSize) *>((static_cast<char *>(bytes) + sizeof(BufferType))))
-			, size(headerSize + dataSize)
-			, type(*static_cast<BufferType *>(bytes))
-			, buf(bytes, [](void *buf) { std::free(buf); }) {}
 
 		///** Buffer owns the byte array, byte array parameter does not include header, create it. */
 		//Buffer(void*&& buffer, decltype(dataSize) dataSize, decltype(type) type):
